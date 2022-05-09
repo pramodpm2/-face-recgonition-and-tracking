@@ -1,4 +1,4 @@
-
+—upgrade setuptools
 opencv-contrib-python
 datetime
 pytest-shutil
