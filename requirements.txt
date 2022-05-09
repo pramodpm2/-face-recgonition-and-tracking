@@ -1,4 +1,4 @@
---upgrade pip
+
 opencv-contrib-python
 datetime
 pytest-shutil
