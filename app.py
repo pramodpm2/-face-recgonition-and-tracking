@@ -9,11 +9,32 @@ import datetime
 import time
 from pymongo import MongoClient
 
-cluster=MongoClient("mongodb+srv://admin:admin@cluster0.nx86a.mongodb.net/FirstDatabase?retryWrites=true&w=majority")
-db = cluster["FirstDatabase"]
-collection=db["logIn"]
-collectionLogOut=db["logOut"]
-collectionEmployees=db["employees"]
+st.set_page_config(layout="wide")
+
+m = st.markdown("""
+<style>
+div.stButton > button:first-child {
+    background-color: #2D2D2D;
+    color:#D7F3D4;
+    height:47px;
+    width:350px;
+    font-size:25px;
+    border-radius:4px;
+}
+div.stButton > button:hover {
+    background-color:#341e46;
+    color:#D7F3D4;
+    }
+</style>""", unsafe_allow_html=True)
+
+try:
+    cluster=MongoClient("mongodb+srv://admin:admin@cluster0.nx86a.mongodb.net/FirstDatabase?retryWrites=true&w=majority")
+    db = cluster["FirstDatabase"]
+    collection=db["logIn"]
+    collectionLogOut=db["logOut"]
+    collectionEmployees=db["employees"]
+except:
+    st.error("Connect to Internet")
 
 ts = time.time()
 date = datetime.datetime.fromtimestamp(ts).strftime('%d-%m-%Y')
@@ -35,11 +56,115 @@ mont={'01':'January',
 
 
 
-col1,col2=st.columns(2)
-c1,c2,c3=st.columns(3)
-sidebar=st.sidebar.selectbox("select Operation",["Employee Registration","Track Employee","Track Information"])
+
+sidebar=st.sidebar.selectbox("Select Operation",["Employee Registration","Track Employee","Track Information"])
 container=st.container()
 
+
+
+def main():
+
+    if sidebar=="Employee Registration":
+        html_temp_home1 = """
+                <div style="color: #47A7C9; font-family: 'Trocchi', serif; font-size: 40px; font-weight: normal; line-height: 48px; margin: 0;letter-spacing: 5px;">
+                EMPLOYEE REGISTRATION
+                </div>
+                <br></br>            
+                """
+        st.markdown(html_temp_home1, unsafe_allow_html=True)
+
+
+        col1, col2 = st.columns(2)
+
+        with container:
+            run,stop,save=False,False,False
+            Id,name="",""
+
+            with col1:
+                res = 0
+                exists = os.path.isfile("StudentDetails\StudentDetails.csv")
+                if exists:
+                    with open("StudentDetails\StudentDetails.csv", 'r') as csvFile1:
+                        reader1 = csv.reader(csvFile1)
+                        for l in reader1:
+                            res = res + 1
+
+                    csvFile1.close()
+                else:
+                    res = 0
+
+                Id= st.text_input('Employee ID')
+                name=st.text_input("Enter Employee Name")
+                run = st.button("Track Image")
+            with col2:
+                if run:
+                    takeImages(Id,name)
+
+
+
+
+    if sidebar=="Track Employee":
+        html_temp_home1 = """
+                        <div style="color: #47A7C9; font-family: 'Trocchi', serif; font-size: 40px; font-weight: normal; line-height: 48px; margin: 0;letter-spacing: 5px;">
+                        TRACK EMPLOYEES
+                        </div>
+                        <br></br>            
+                        """
+        st.markdown(html_temp_home1, unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+
+        with container:
+            with c1:
+                logIn = st.button("Log In")
+            with c2:
+                logOut=st.button("Log Out")
+            with c3:
+                stop = st.button("Stop Tracking")
+
+
+        if logIn:
+            TrackImages(stop)
+        if logOut:
+            logOutTracking(stop)
+
+    if sidebar=="Track Information":
+        html_temp_home1 = """
+                                <div style="color: #47A7C9; font-family: 'Trocchi', serif; font-size: 40px; font-weight: normal; line-height: 48px; margin: 0;letter-spacing: 5px;">
+                                 EMPLOYEES TRACK INFORMATION
+                                </div>
+                                <br></br>        
+                                """
+        st.markdown(html_temp_home1, unsafe_allow_html=True)
+        value=st.selectbox("Select Info",["log In","log Out"])
+        if value=="log In":
+            x = collection.find()
+            data=[]
+            d=st.date_input("Select The date").strftime('%d-%m-%Y')
+
+            if d:
+                for i in x:
+                    if d==i["date"]:
+                        data.append(i)
+
+            df = pd.DataFrame(
+               data,
+                columns=(["EmployeeId","Name","status","date","time"]))
+            st.table(df)
+
+        if value == "log Out":
+            x = collectionLogOut.find()
+            data = []
+            d = st.date_input("Select The date").strftime('%d-%m-%Y')
+
+            if d:
+                for i in x:
+                    if d == i["date"]:
+                        data.append(i)
+
+            df = pd.DataFrame(
+                data,
+                columns=(["EmployeeId", "Name", "status", "date", "time"]))
+            st.table(df)
 
 
 
@@ -163,6 +288,7 @@ def TrainImages(serial,name,Id):
     recognizer.save("TrainingImageLabel\Trainner.yml")
     collectionEmployees.insert_one({"serialNo": serial, "EmployeeId": Id, "name": name})
     st.success("Profile Saved Successfully")
+    st.balloons()
 
 
 def TrackImages(stop):
@@ -217,8 +343,8 @@ def TrackImages(stop):
             else:
                 Id = 'Unknown'
                 bb = str(Id)
-            cv2.putText(im, str(bb), (x, y + h), font, 1, (255, 255, 255), 2)
-        FRAME_WINDOW.image(im)
+            # cv2.putText(im, str(bb), (x, y + h), font, 1, (255, 255, 255), 2)
+        FRAME_WINDOW.image(gray)
         if (cv2.waitKey(1) == ord('q')) or stop:
             break
 
@@ -226,28 +352,11 @@ def TrackImages(stop):
     cv2.destroyAllWindows()
 
 
-def logOutTracking(stop):
-    check_haarcascadefile()
-    assure_path_exists("TrainingImageLabel/")
-    recognizer = cv2.face.LBPHFaceRecognizer_create()
-    harcascadePath = "haarcascade_frontalface_default.xml"
-    detector = cv2.CascadeClassifier(harcascadePath)
-    faces, ID = getImagesAndLabels("TrainingImages")
-
-    try:
-        recognizer.train(faces, np.array(ID))
-    except:
-        st.error("Please Register someone first!!!")
-        return
-
-    recognizer.save("TrainingImageLabel\Trainner.yml")
-    st.success("Profile Saved Successfully")
 
 
 def logOutTracking(stop):
     check_haarcascadefile()
     assure_path_exists("StudentDetails/")
-
 
     recognizer = cv2.face.LBPHFaceRecognizer_create()  # cv2.createLBPHFaceRecognizer()
     exists3 = os.path.isfile("TrainingImageLabel\Trainner.yml")
@@ -291,6 +400,7 @@ def logOutTracking(stop):
                 attendance = [str(ID), '', bb, '', str(date), '', str(timeStamp)]
 
                 st.success("Employee with " + ID + " Is Logged Out Suucesfully")
+
                 collectionLogOut.insert_one({"EmployeeId": ID, "Name": bb, "status": "logOut", "date": str(date),
                                        "time": str(timeStamp)})
                 time.sleep(15)
@@ -307,75 +417,7 @@ def logOutTracking(stop):
 
 
 
-if sidebar=="Employee Registration":
-    st.title("Employee Registration")
-    with container:
-        run,stop,save=False,False,False
-        Id,name="",""
 
-        with col1:
-            res = 0
-            exists = os.path.isfile("StudentDetails\StudentDetails.csv")
-            if exists:
-                with open("StudentDetails\StudentDetails.csv", 'r') as csvFile1:
-                    reader1 = csv.reader(csvFile1)
-                    for l in reader1:
-                        res = res + 1
-
-                csvFile1.close()
-            else:
-                res = 0
-
-            st.text('Total Registrations till now  : ' + str(res-4))
-            Id= st.text_input('Employee ID')
-            name=st.text_input("Enter Employee Name")
-            run = st.button("Track Image")
-        with col2:
-            if run:
-                takeImages(Id,name)
-
-
-
-if sidebar=="Track Employee":
-    st.title("Track Employees")
-    with container:
-        with c1:
-            logIn = st.button("Log In")
-        with c2:
-            logOut=st.button("Log Out")
-        with c3:
-            stop = st.button("Stop Tracking")
-
-
-    if logIn:
-        TrackImages(stop)
-    if logOut:
-        logOutTracking(stop)
-
-if sidebar=="Track Information":
-    st.subheader("Employee Track Information")
-
-    value=st.selectbox("Select Info",["logIn","logOut"])
-    if value=="logIn":
-        x = collection.find()
-        data=[]
-        d=st.date_input("Select The date").strftime('%d-%m-%Y')
-
-        if d:
-            for i in x:
-                if d==i["date"]:
-                    data.append(i)
-
-        df = pd.DataFrame(
-           data,
-            columns=(["EmployeeId","Name","status","date","time"]))
-        st.table(df)
-
-    if value == "logOut":
-        st.subheader("wait")
-
-
-
-
-
+if __name__=="__main__":
+    main()
 
