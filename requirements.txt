@@ -1,4 +1,4 @@
-
+pip==21.3.1
 opencv-contrib-python
 datetime
 pytest-shutil
