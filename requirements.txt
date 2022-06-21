@@ -9,3 +9,5 @@ pandas
 times
 pymongo
 streamlit
+setuptools==57.5.0
+demjson>=2.2.4
